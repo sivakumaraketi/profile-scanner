@@ -1,103 +1,125 @@
-import Image from "next/image";
+"use client";
+import React, { useState, useRef, useEffect } from "react";
+import QRCode from "react-qr-code";
+import { useSpring } from "react-spring";
 
-export default function Home() {
+const Scanner = () => {
+  const [inputValue, setInputValue] = useState(
+    "https://europa.eu/europass/eportfolio/api/eprofile/shared-profile/siva+kumar-aketi/fab13cca-9f88-42d9-9590-0c70212e0c7f?view=html"
+  );
+  const [qrValue, setQrValue] = useState<string | null>(inputValue);
+  const [error, setError] = useState("");
+  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const qrCodeRef = useRef<SVGSVGElement>(null);
+
+  const fadeIn = useSpring({
+    opacity: qrValue ? 1 : 0,
+    transform: qrValue ? "scale(1)" : "scale(0.5)",
+  });
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    try {
+      new URL(inputValue);
+      setQrValue(inputValue);
+      setError("");
+    } catch {
+      setQrValue(null);
+      setError("Please enter a valid URL.");
+    }
+  };
+
+  const handleDownload = () => {
+    if (!qrCodeRef.current) return;
+  
+    const svg = qrCodeRef.current;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    const img = new Image();
+  
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+  
+      // Create a temporary link to download the image
+      const link = document.createElement("a");
+      link.download = "qr-code.png";
+      link.href = canvas.toDataURL("image/png");
+      link.click();
+  
+      setDownloadSuccess(true);
+      setTimeout(() => setDownloadSuccess(false), 3000);
+    };
+  
+    // Convert the SVG data to a data URL instead of a blob URL
+    const svgBase64 = btoa(unescape(encodeURIComponent(svgData)));
+    img.src = `data:image/svg+xml;base64,${svgBase64}`;
+  };
+
+  if (!mounted) {
+    return null;
+  }
+
   return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+    <div className="flex flex-col items-center justify-center mt-10 p-4">
+      <h2 className="text-xl font-semibold mb-4">Generate Your QR Code</h2>
+      <p className="text-gray-600 mb-4">Designed by Siva Kumar Aketi</p>
+      <p className="text-gray-600 mb-4">
+        Enter a valid URL to generate a QR code.
+      </p>
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+      <form onSubmit={handleSubmit} className="flex flex-col items-center">
+        <input
+          type="text"
+          className="border border-gray-300 rounded p-2 mb-2 w-[300px]"
+          placeholder="Enter a valid URL"
+          value={inputValue}
+          onChange={(e) => setInputValue(e.target.value)}
+        />
+        <button
+          type="submit"
+          className="bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded px-4 py-2"
+        >
+          Generate QR Code
+        </button>
+      </form>
+
+      {error && <p className="text-red-500 mt-2">{error}</p>}
+
+      {qrValue && (
+        <div className="mt-8 flex flex-col items-center">
+          <h3 className="text-lg font-medium mb-2" style={fadeIn}>
+            Scan the QR Code:
+          </h3>
+          <div style={fadeIn}>
+            <QRCode
+              value={qrValue}
+              size={256}
+              ref={qrCodeRef}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+          </div>
+          <button
+            onClick={handleDownload}
+            className="mt-4 bg-green-500 hover:bg-green-600 text-white font-semibold rounded px-4 py-2"
           >
-            Read our docs
-          </a>
+            Download QR Code
+          </button>
+          {downloadSuccess && (
+            <p className="text-green-500 mt-4">
+              QR Code downloaded successfully!
+            </p>
+          )}
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+      )}
     </div>
   );
-}
+};
+
+export default Scanner;
